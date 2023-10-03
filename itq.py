@@ -47,10 +47,10 @@ def train(
     pca = PCA(n_components=code_length)
     V = torch.from_numpy(pca.fit_transform(train_data.numpy())).to(device)
 
-    pdb.set_trace()
+    
 
-    print(V.shape)
-    print(type(V))
+    # print(V.shape)
+    # print(type(V))
 
     # Training
     for i in range(max_iter):
@@ -59,9 +59,10 @@ def train(
         [U, _, VT] = torch.svd(B.t() @ V)
         R = (VT.t() @ U.t())
 
+    pdb.set_trace()
     # Training W
-    training_code = generate_code(train_data.cpu(), code_length, R, pca)
-    # k_bit_matrix_generator = kBitWeights(training_code, code_length, k, max_iter)
+    training_code = generate_code_new(train_data.cpu(), code_length, R, pca)
+    k_bit_matrix_generator = KBitWeights(training_code, k, max_iter)
     
     # Evaluate
     # Generate query code and retrieval code
@@ -118,3 +119,20 @@ def generate_code(data, code_length, R, pca):
     """
     return (torch.from_numpy(pca.transform(data.numpy())).to(R.device) @ R).sign()
 
+def generate_code_new(data, code_length, R, pca):
+    """
+    Generate binary hashing code (0 or 1).
+
+    Args
+        data(torch.Tensor): Data.
+        code_length(int): Hashing code length.
+        R(torch.Tensor): Rotation matrix.
+        pca(callable): PCA function.
+
+    Returns
+        binary_code(torch.Tensor): Binary code (0 or 1).
+    """
+    pca_data = torch.from_numpy(pca.transform(data.numpy())).to(R.device)
+    continuous_code = pca_data @ R
+    binary_code = (continuous_code >= 0).int()  # Convert to 0 or 1
+    return binary_code

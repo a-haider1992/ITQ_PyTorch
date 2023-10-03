@@ -35,6 +35,7 @@ def run():
             args.max_iter,
             args.device,
             args.topk,
+            args.k
         )
         logger.info('[code_length:{}][map:{:.4f}]'.format(code_length, checkpoint['map']))
         torch.save(checkpoint, 'checkpoints/{}_code_{}_map_{:.4f}.pt'.format(args.dataset, code_length, checkpoint['map']))
@@ -60,6 +61,8 @@ def load_config():
                         help='Binary hash code length.(default: 8,16,24,32,48,64,96,128)')
     parser.add_argument('--max-iter', default=3, type=int,
                         help='Number of iterations.(default: 3)')
+    parser.add_argument('--k', default=1, type=int,
+                        help='Number of most significant bits (Left -> Right).(default: 1)')
     parser.add_argument('--topk', default=-1, type=int,
                         help='Calculate map of top k.(default: ALL)')
     parser.add_argument('--gpu', default=None, type=int,
