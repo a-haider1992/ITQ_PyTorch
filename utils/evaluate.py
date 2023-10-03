@@ -93,4 +93,18 @@ def pr_curve(query_code, retrieval_code, query_targets, retrieval_targets, devic
     P = P.sum(dim=0) / mask
     R = R.sum(dim=0) / mask
 
+    import matplotlib.pyplot as plt
+
+    # Plot the Precision-Recall curve
+    plt.figure(figsize=(8, 6))
+    plt.plot(R, P, marker='.')
+    plt.xlabel('Recall')
+    plt.ylabel('Precision')
+    plt.title('Precision-Recall Curve (128 bit)')
+    plt.grid(True)
+    plt.xlim(0, 1)
+    plt.ylim(0, 1)
+    plt.savefig('PR-curve-128.jpg')
+
+
     return P, R
