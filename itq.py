@@ -3,7 +3,9 @@ import numpy as np
 
 from sklearn.decomposition import PCA
 from utils.evaluate import mean_average_precision, pr_curve
+from kbit_weight import KBitWeights
 
+import pdb
 
 def train(
     train_data,
@@ -15,6 +17,7 @@ def train(
     max_iter,
     device,
     topk,
+    k
     ):
     """
     Training model.
@@ -29,6 +32,7 @@ def train(
         max_iter(int): Number of iterations.
         device(torch.device): GPU or CPU.
         topk(int): Calculate top k data points map.
+        k(int): k = [1, code_length/2] significant bits of generated hash codes.
 
     Returns
         checkpoint(dict): Checkpoint.
@@ -43,6 +47,11 @@ def train(
     pca = PCA(n_components=code_length)
     V = torch.from_numpy(pca.fit_transform(train_data.numpy())).to(device)
 
+    pdb.set_trace()
+
+    print(V.shape)
+    print(type(V))
+
     # Training
     for i in range(max_iter):
         V_tilde = V @ R
@@ -50,6 +59,10 @@ def train(
         [U, _, VT] = torch.svd(B.t() @ V)
         R = (VT.t() @ U.t())
 
+    # Training W
+    training_code = generate_code(train_data.cpu(), code_length, R, pca)
+    # k_bit_matrix_generator = kBitWeights(training_code, code_length, k, max_iter)
+    
     # Evaluate
     # Generate query code and retrieval code
     query_code = generate_code(query_data.cpu(), code_length, R, pca)
