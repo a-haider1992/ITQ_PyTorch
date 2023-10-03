@@ -1,4 +1,5 @@
 matplotlib
+scikit-learn
 torch
 torchvision
 loguru
