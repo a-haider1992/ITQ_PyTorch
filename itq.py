@@ -63,6 +63,7 @@ def train(
     # Training W
     training_code = generate_code_new(train_data.cpu(), code_length, R, pca)
     k_bit_matrix_generator = KBitWeights(training_code, k, max_iter)
+    k_bit_matrix_generator.initialize_w()
     
     # Evaluate
     # Generate query code and retrieval code
@@ -99,6 +100,7 @@ def train(
         'P': P,
         'R': Recall,
         'map': mAP,
+        'W': k_bit_matrix_generator.W,
     }
 
     return checkpoint

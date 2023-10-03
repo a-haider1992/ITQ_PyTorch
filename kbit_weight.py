@@ -15,13 +15,18 @@ class KBitWeights:
         self.hash_length = train_data.shape[1]
         self.k = k
         self.max_iterations = max_iterations
-        self.W = np.eye(self.hash_length)
+        self.W = np.zeros((self.hash_length, self.hash_length))
 
     def initialize_w(self):
         """
         Initialize W as an upper-triangular matrix with k elements above the diagonal.
         """
-        pass
+        for i in range(self.hash_length):
+            for j in range(self.hash_length):
+                if ((i == j) or ((j < (i + self.k)) and (j > i))):
+                    self.W[i][j] = 1.0
+                else:
+                    self.W[i][j] = 0.0
 
     def train(self):
         """
