@@ -35,7 +35,8 @@ def run():
             args.max_iter,
             args.device,
             args.topk,
-            args.k
+            args.k,
+            logger
         )
         logger.info('[code_length:{}][map:{:.4f}]'.format(code_length, checkpoint['map']))
         torch.save(checkpoint, 'checkpoints/{}_code_{}_map_{:.4f}.pt'.format(args.dataset, code_length, checkpoint['map']))

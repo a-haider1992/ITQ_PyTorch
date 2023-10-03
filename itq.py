@@ -17,7 +17,8 @@ def train(
     max_iter,
     device,
     topk,
-    k
+    k,
+    logger
     ):
     """
     Training model.
@@ -33,6 +34,7 @@ def train(
         device(torch.device): GPU or CPU.
         topk(int): Calculate top k data points map.
         k(int): k = [1, code_length/2] significant bits of generated hash codes.
+        logger: Logging progress.
 
     Returns
         checkpoint(dict): Checkpoint.
@@ -47,11 +49,6 @@ def train(
     pca = PCA(n_components=code_length)
     V = torch.from_numpy(pca.fit_transform(train_data.numpy())).to(device)
 
-    
-
-    # print(V.shape)
-    # print(type(V))
-
     # Training
     for i in range(max_iter):
         V_tilde = V @ R
@@ -64,6 +61,7 @@ def train(
     training_code = generate_code_new(train_data.cpu(), code_length, R, pca)
     k_bit_matrix_generator = KBitWeights(training_code, k, max_iter)
     k_bit_matrix_generator.initialize_w()
+    # k_bit_matrix_generator.train()
     
     # Evaluate
     # Generate query code and retrieval code
