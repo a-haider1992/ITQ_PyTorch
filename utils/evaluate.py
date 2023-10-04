@@ -1,6 +1,61 @@
 import torch
 
 
+def mean_average_precision_with_bit_similarity(query_code,
+                                               retrieval_code,
+                                               query_targets,
+                                               retrieval_targets,
+                                               device,
+                                               bit_weights,
+                                               topk=None):
+    """
+    Calculate mean average precision (MAP) with bit similarity scores and influence of bit weights.
+
+    Args:
+        query_code (torch.Tensor): Query data hash code.
+        retrieval_code (torch.Tensor): Retrieval data hash code.
+        query_targets (torch.Tensor): Query data targets, one-hot.
+        retrieval_targets (torch.Tensor): Retrieval data targets, one-hot.
+        device (torch.device): Using CPU or GPU.
+        bit_weights (torch.Tensor): Bit weight matrix of size (code_length x code_length).
+        topk (int): Calculate top k data map.
+
+    Returns:
+        meanAP (float): Mean Average Precision.
+    """
+    num_query = query_targets.shape[0]
+    mean_AP = 0.0
+
+    for i in range(num_query):
+        # Retrieve images from database
+        retrieval = (query_targets[i, :] @ retrieval_targets.t() > 0).float()
+
+        # Calculate bit similarity scores with bit weights influence
+        bit_similarity_scores = query_code[i, :] * (bit_weights @ retrieval_code.t())
+
+        # Arrange position according to bit similarity scores
+        sorted_indices = torch.argsort(bit_similarity_scores, descending=True)
+        retrieval = retrieval[sorted_indices][:topk]
+
+        # Retrieval count
+        retrieval_cnt = retrieval.sum().int().item()
+
+        # Can not retrieve images
+        if retrieval_cnt == 0:
+            continue
+
+        # Generate score for every position
+        score = torch.linspace(1, retrieval_cnt, retrieval_cnt).to(device)
+
+        # Acquire index
+        index = (torch.nonzero(retrieval == 1).squeeze() + 1.0).float()
+
+        mean_AP += (score / index).mean()
+
+    mean_AP = mean_AP / num_query
+    return mean_AP.item()
+
+
 def mean_average_precision(query_code,
                            retrieval_code,
                            query_targets,
