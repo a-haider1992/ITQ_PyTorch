@@ -2,4 +2,5 @@ matplotlib
 scikit-learn
 torch
 torchvision
+tqdm
 loguru
