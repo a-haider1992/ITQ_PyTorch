@@ -61,7 +61,7 @@ def train(
     training_code = generate_code_new(train_data.cpu(), code_length, R, pca)
     k_bit_matrix_generator = KBitWeights(training_code, k, max_iter, logger, device)
     k_bit_matrix_generator.initialize_w()
-    # W = k_bit_matrix_generator.train()
+    W = k_bit_matrix_generator.train()
         
     # Evaluate
     # Generate query code and retrieval code

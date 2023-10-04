@@ -5,6 +5,7 @@ import time
 import math
 import itertools
 import torch
+from torch.nn.parallel import DataParallel
 
 class KBitWeights:
     def __init__(self, train_data, k, max_iterations, logger, device):
@@ -26,6 +27,7 @@ class KBitWeights:
         self.C = None
         self.log = logger
         self.device = device
+        self.C_parallel = CreateCParallel(self.k, device_ids=[0, 1])
 
     def initialize_w(self):
         """
@@ -97,7 +99,8 @@ class KBitWeights:
         matrix_gpu = torch.zeros(len(flip_indices_combinations), n, dtype=torch.int32, device=self.device)
         
         # Copy the input binary vector to the GPU
-        binary_vector_gpu = torch.tensor(binary_vector, dtype=torch.int32, device=self.device)
+        binary_vector_gpu = binary_vector.clone().detach()
+        # binary_vector_gpu = torch.tensor(binary_vector, dtype=torch.int32, device=self.device)
         
         # Loop through each combination and invert bits using GPU
         for i, flip_indices in enumerate(flip_indices_combinations):
@@ -127,10 +130,81 @@ class KBitWeights:
             for row in self.train_data_hash:
                 # self.C = self.generate_candidate_matrix(row)
                 self.C = self.generate_candidate_matrix_gpu(row)
-                print(f'The shape of C: {self.C.shape}')
-                # D = np.dot(self.C, self.W)
+                # self.C = self.C_parallel.generate_candidate_matrix_gpu(row)
+                # print(f'The shape of C: {self.C.shape}')
+                ##D = np.dot(self.C, self.W)
                 # Compute SVD, then update W
+                # Compute the SVD
+                ##U, S, Vt = np.linalg.svd(D)
+                # U: Left singular vectors
+                # S: Singular values (a 1-D array of non-negative real numbers)
+                # Vt: Right singular vectors (transpose of V)
+                # You can reconstruct the original matrix using U, S, and Vt
+                ##reconstructed_matrix = np.dot(U, np.dot(np.diag(S), Vt))
+                ##U = U[self.C.shape[0] - self.hash_length, :]
+                ##self.W = (U.T * Vt.T * self.W)
         end_time = time.time()
         self.log.info('kBit algorithm training completed in {} secs.'.format(end_time - start_time))
         return self.W
+    
+class InvertBitsModel(torch.nn.Module):
+    def __init__(self, method):
+        super(InvertBitsModel, self).__init__()
+        self.method = method
+
+    def forward(self, binary_vector_gpu, flip_indices_combinations):
+        return self.method(binary_vector_gpu, flip_indices_combinations)
+
+class CreateCParallel:
+    def __init__(self, k, device_ids=None):
+        # Initialize your class and specify the list of GPU device IDs to use
+        self.device_ids = device_ids
+        self.device = torch.device("cuda:{}".format(self.device_ids[0])) if device_ids else torch.device("cpu")
+        self.k = k
+
+    def generate_candidate_matrix_gpu(self, binary_vector):
+        n = len(binary_vector)
+
+        if self.k > n:
+            raise ValueError("k cannot be greater than the length of the binary vector.")
+
+        # Generate combinations of indices to flip
+        flip_indices_combinations = list(itertools.combinations(range(n), self.k))
+
+        # Initialize the matrix on the GPU
+        matrix_gpu = torch.zeros(len(flip_indices_combinations), n, dtype=torch.int32, device=self.device)
+
+        # Copy the input binary vector to the GPU
+        binary_vector_gpu = torch.tensor(binary_vector, dtype=torch.int32, device=self.device)
+
+        # Create a model wrapper for DataParallel
+        parallel_model = InvertBitsModel(self._invert_bits)
+        parallel_model = DataParallel(parallel_model, device_ids=self.device_ids)
+
+        # Call the model wrapper with arguments
+        result_matrix_gpu = parallel_model(binary_vector_gpu, flip_indices_combinations)
+
+        # Copy the resulting matrix from GPU to CPU for further processing if needed
+        matrix_cpu = result_matrix_gpu.cpu()
+
+        return matrix_cpu
+    
+    def _invert_bits(self, binary_vector_gpu, flip_indices_combinations):
+        result_matrix = torch.zeros(len(flip_indices_combinations), len(binary_vector_gpu), dtype=torch.int32, device=self.device)
+        
+        for i, flip_indices in enumerate(flip_indices_combinations):
+            new_vector_gpu = binary_vector_gpu.clone()
+            
+            for index in flip_indices:
+                if index < len(new_vector_gpu):
+                    new_vector_gpu[index] = 1 - new_vector_gpu[index]
+            
+            result_matrix[i] = new_vector_gpu
+            
+        return result_matrix
+
+
+
+
+
 
