@@ -62,7 +62,17 @@ def train(
     k_bit_matrix_generator = KBitWeights(training_code, k, max_iter)
     k_bit_matrix_generator.initialize_w()
     # k_bit_matrix_generator.train()
-    
+
+    # Test two same and similar images
+    print("Query images!!")
+    print(query_data[0])
+    print(query_data[1])
+    image1_code = generate_code(query_data[0].cpu(), code_length, R, pca)
+    image2_code = generate_code(query_data[1].cpu(), code_length, R, pca)
+    print("Corresponding hash codes!!")
+    print(image1_code)
+    print(image2_code)
+
     # Evaluate
     # Generate query code and retrieval code
     query_code = generate_code(query_data.cpu(), code_length, R, pca)
