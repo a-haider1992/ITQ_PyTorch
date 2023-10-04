@@ -62,7 +62,13 @@ def train(
     k_bit_matrix_generator = KBitWeights(training_code, k, max_iter, logger, device)
     k_bit_matrix_generator.initialize_w()
     W = k_bit_matrix_generator.train()
-    
+
+    print("Query data vectors")
+    image_hash1 = generate_code_new(query_data[0].cpu(), code_length, R, pca)
+    image_hash2 = generate_code_new(query_data[1].cpu(), code_length, R, pca)
+    print(image_hash1)
+    print(image_hash2)
+        
     # Evaluate
     # Generate query code and retrieval code
     query_code = generate_code(query_data.cpu(), code_length, R, pca)
