@@ -1,8 +1,8 @@
 import torch
 import numpy as np
-
+import os
 from sklearn.decomposition import PCA
-from utils.evaluate import mean_average_precision, pr_curve
+from utils.evaluate import mean_average_precision, pr_curve, mean_average_precision_with_bit_similarity
 from kbit_weight import KBitWeights
 
 import pdb
@@ -56,6 +56,7 @@ def train(
         [U, _, VT] = torch.svd(B.t() @ V)
         R = (VT.t() @ U.t())
 
+    
     pdb.set_trace()
     # Training kBit
     training_code = generate_code_new(train_data.cpu(), code_length, R, pca)
@@ -68,6 +69,14 @@ def train(
     query_code = generate_code(query_data.cpu(), code_length, R, pca)
     retrieval_code = generate_code(retrieval_data.cpu(), code_length, R, pca)
 
+    _ = mean_average_precision_with_bit_similarity(query_code,
+        retrieval_code,
+        query_targets,
+        retrieval_targets,
+        device,
+        k_bit_matrix_generator.W,
+        topk,
+        )
     # Compute map
     mAP = mean_average_precision(
         query_code,

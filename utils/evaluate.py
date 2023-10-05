@@ -148,6 +148,9 @@ def pr_curve(query_code, retrieval_code, query_targets, retrieval_targets, devic
     P = P.sum(dim=0) / mask
     R = R.sum(dim=0) / mask
 
+    P = P.cpu().numpy()
+    R = R.cpu().numpy()
+
     import matplotlib.pyplot as plt
 
     # Plot the Precision-Recall curve
@@ -159,7 +162,6 @@ def pr_curve(query_code, retrieval_code, query_targets, retrieval_targets, devic
     plt.grid(True)
     plt.xlim(0, 1)
     plt.ylim(0, 1)
-    plt.savefig('PR-curve-128.jpg')
-
+    plt.savefig(f'PR-curve-{num_bit}.jpg')
 
     return P, R
