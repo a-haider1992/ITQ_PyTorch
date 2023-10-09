@@ -8,6 +8,8 @@ import torch
 import torch.nn as nn
 from torch.nn.parallel import DataParallel
 
+import pdb
+
 class KBitWeights:
     def __init__(self, train_data, k, max_iterations, logger, device):
         """
@@ -24,7 +26,9 @@ class KBitWeights:
         self.hash_length = train_data.shape[1]
         self.k = k
         self.max_iterations = max_iterations
-        self.W = np.zeros((self.hash_length, self.hash_length))
+        # self.W = np.zeros((self.hash_length, self.hash_length))
+        # self.W = np.triu(np.ones((self.hash_length, self.hash_length)), k=0)
+        self.W = np.eye(self.hash_length)
         self.C = None
         self.log = logger
         self.device = device
@@ -127,6 +131,7 @@ class KBitWeights:
             np.ndarray: The trained upper-triangular weight matrix W.
         """
         start_time = time.time()
+        # pdb.set_trace()
         for iter in trange(self.max_iterations, desc="kbits algorithm training in progress.."):
             for row in self.train_data_hash:
                 # self.C = self.generate_candidate_matrix(row)
@@ -142,9 +147,9 @@ class KBitWeights:
                 # Vt: Right singular vectors (transpose of V)
                 # You can reconstruct the original matrix using U, S, and Vt
                 ##reconstructed_matrix = np.dot(U, np.dot(np.diag(S), Vt))
-                U = U[-self.hash_length:, -self.hash_length:]
+                U = U[-self.hash_length:, :self.hash_length]
                 # self.W = (S * Vt.T * self.W)
-                self.W = (U.T * Vt.T * self.W)
+                self.W = (U.T * Vt.T)
         end_time = time.time()
         self.log.info('kBit algorithm training completed in {} secs.'.format(end_time - start_time))
         return self.W

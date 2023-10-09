@@ -56,13 +56,12 @@ def train(
         [U, _, VT] = torch.svd(B.t() @ V)
         R = (VT.t() @ U.t())
 
-    
-    pdb.set_trace()
     # Training kBit
     training_code = generate_code_new(train_data.cpu(), code_length, R, pca)
     k_bit_matrix_generator = KBitWeights(training_code, k, max_iter, logger, device)
-    k_bit_matrix_generator.initialize_w()
+    # k_bit_matrix_generator.initialize_w()
     W = k_bit_matrix_generator.train()
+    print(W)
         
     # Evaluate
     # Generate query code and retrieval code

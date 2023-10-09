@@ -1,5 +1,5 @@
 import torch
-
+import pdb
 
 def mean_average_precision_with_bit_similarity(query_code,
                                                retrieval_code,
@@ -25,13 +25,18 @@ def mean_average_precision_with_bit_similarity(query_code,
     """
     num_query = query_targets.shape[0]
     mean_AP = 0.0
-
+    pdb.set_trace()
     for i in range(num_query):
         # Retrieve images from database
         retrieval = (query_targets[i, :] @ retrieval_targets.t() > 0).float()
 
+        query_code = query_code.double()
+        retrieval_code = retrieval_code.double()
+
+        bit_weights = torch.from_numpy(bit_weights).double().to(query_code.device)
+
         # Calculate bit similarity scores with bit weights influence
-        bit_similarity_scores = query_code[i, :] * (bit_weights @ retrieval_code.t())
+        bit_similarity_scores = query_code[i, :] * (bit_weights @ retrieval_code.t()).t()
 
         # Arrange position according to bit similarity scores
         sorted_indices = torch.argsort(bit_similarity_scores, descending=True)
