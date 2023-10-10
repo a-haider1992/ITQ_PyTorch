@@ -39,6 +39,7 @@ def run():
             logger
         )
         logger.info('[code_length:{}][map:{:.4f}]'.format(code_length, checkpoint['map']))
+        logger.info('[code_length:{}][map Bits:{:.4f}]'.format(code_length, checkpoint['mAPBit']))
         torch.save(checkpoint, 'checkpoints/{}_code_{}_map_{:.4f}.pt'.format(args.dataset, code_length, checkpoint['map']))
 
 

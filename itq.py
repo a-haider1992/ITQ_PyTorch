@@ -61,19 +61,20 @@ def train(
     k_bit_matrix_generator = KBitWeights(training_code, k, max_iter, logger, device)
     # k_bit_matrix_generator.initialize_w()
     W = k_bit_matrix_generator.train()
-    print(W)
+    W = torch.from_numpy(W).double().to(device)
+    print(W.shape)
         
     # Evaluate
     # Generate query code and retrieval code
     query_code = generate_code(query_data.cpu(), code_length, R, pca)
     retrieval_code = generate_code(retrieval_data.cpu(), code_length, R, pca)
 
-    _ = mean_average_precision_with_bit_similarity(query_code,
+    mAP_bit = mean_average_precision_with_bit_similarity(query_code,
         retrieval_code,
         query_targets,
         retrieval_targets,
         device,
-        k_bit_matrix_generator.W,
+        W,
         topk,
         )
     # Compute map
@@ -107,6 +108,7 @@ def train(
         'R': Recall,
         'map': mAP,
         'W': k_bit_matrix_generator.W,
+        'mAPBit': mAP_bit,
     }
 
     return checkpoint
