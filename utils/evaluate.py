@@ -1,5 +1,7 @@
 import torch
+import matplotlib.pyplot as plt
 import pdb
+import numpy as np
 
 def mean_average_precision_with_bit_similarity(query_code,
                                                retrieval_code,
@@ -158,8 +160,6 @@ def pr_curve(query_code, retrieval_code, query_targets, retrieval_targets, devic
     P = P.cpu().numpy()
     R = R.cpu().numpy()
 
-    import matplotlib.pyplot as plt
-
     # Plot the Precision-Recall curve
     plt.figure(figsize=(8, 6))
     plt.plot(R, P, marker='.')
@@ -172,3 +172,85 @@ def pr_curve(query_code, retrieval_code, query_targets, retrieval_targets, devic
     plt.savefig(f'PR-curve-{num_bit}.jpg')
 
     return P, R
+
+
+def pr_curve_bit_similarity(query_code, retrieval_code, query_targets, retrieval_targets, device, bit_weights):
+    """
+    P-R curve based on bit similarity scores with bit weights influence.
+
+    Args:
+        query_code (torch.Tensor): Query data hash code.
+        retrieval_code (torch.Tensor): Retrieval data hash code.
+        query_targets (torch.Tensor): Query data targets.
+        retrieval_targets (torch.Tensor): Retrieval data targets.
+        device (torch.device): Using CPU or GPU.
+        bit_weights (torch.Tensor): Bit weight matrix of size (code_length x code_length).
+
+    Returns:
+        P (torch.Tensor): Precision.
+        R (torch.Tensor): Recall.
+    """
+    num_query = query_code.shape[0]
+    num_bit = query_code.shape[1]
+    P = torch.zeros(num_query).to(device)
+    R = torch.zeros(num_query).to(device)
+    query_code = query_code.double()
+    retrieval_code = retrieval_code.double()
+
+    for i in range(num_query):
+        # pdb.set_trace()
+        # Calculate bit similarity scores with bit weights influence
+        bit_similarity_scores = query_code[i, :] * (bit_weights @ retrieval_code.t()).t()
+
+        # Initialize retrieval tensor with zeros
+        retrieval = torch.zeros_like(retrieval_targets, dtype=torch.float)
+
+        # Update retrieval based on the bit_similarity_scores
+        for bit_index in range(min(num_bit, retrieval.shape[1])):
+            retrieval[:, bit_index] = (bit_similarity_scores[:, bit_index] >= bit_similarity_scores[:, num_bit - bit_index - 1]).float()
+
+        #  Calculate True Positives and False Positives
+        true_positives = (retrieval * retrieval_targets).sum(dim=1)
+        false_positives = (retrieval * (1 - retrieval_targets)).sum(dim=1)
+
+        # Avoid dividing by zero
+        denominator = true_positives + false_positives
+        valid_indices = denominator != 0
+
+        # Calculate Precision and Recall
+        precision = torch.zeros_like(denominator, dtype=torch.float)
+        precision[valid_indices] = true_positives[valid_indices] / denominator[valid_indices]
+        recall = true_positives / retrieval_targets.sum(dim=1)
+
+        # pdb.set_trace()
+
+        # Average precision and recall for all queries
+        P[i] = precision.mean()
+        R[i] = recall.mean()
+
+    P = P.cpu().numpy()
+    R = R.cpu().numpy()
+
+    P = min_max_scaling(P)
+    R = min_max_scaling(R)
+
+    # pdb.set_trace()
+
+    # Plot the Precision-Recall curve
+    plt.figure(figsize=(8, 6))
+    plt.plot(R, P, marker='.')
+    plt.xlabel('Recall')
+    plt.ylabel('Precision')
+    plt.title('Precision-Recall Curve (Bit Similarity with Bit Weights)')
+    plt.grid(True)
+    plt.xlim(0, 1)
+    plt.ylim(0, 1)
+    plt.savefig(f'PR-curve-bit-similarity-{num_bit}.jpg')
+
+    return P, R
+
+def min_max_scaling(array):
+    min_val = np.min(array)
+    max_val = np.max(array)
+    scaled_array = (array - min_val) / (max_val - min_val)
+    return scaled_array

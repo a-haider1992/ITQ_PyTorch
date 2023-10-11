@@ -2,7 +2,7 @@ import torch
 import numpy as np
 import os
 from sklearn.decomposition import PCA
-from utils.evaluate import mean_average_precision, pr_curve, mean_average_precision_with_bit_similarity
+from utils.evaluate import mean_average_precision, pr_curve, mean_average_precision_with_bit_similarity, pr_curve_bit_similarity
 from kbit_weight import KBitWeights
 
 import pdb
@@ -57,7 +57,7 @@ def train(
         R = (VT.t() @ U.t())
 
     # Training kBit
-    training_code = generate_code_new(train_data.cpu(), code_length, R, pca)
+    training_code = generate_code(train_data.cpu(), code_length, R, pca)
     k_bit_matrix_generator = KBitWeights(training_code, k, max_iter, logger, device)
     # k_bit_matrix_generator.initialize_w()
     W = k_bit_matrix_generator.train()
@@ -96,6 +96,13 @@ def train(
         device,
     )
 
+    P_bit, R_bit = pr_curve_bit_similarity(query_code,
+        retrieval_code,
+        query_targets,
+        retrieval_targets,
+        device,
+        W)
+    
     # Save checkpoint
     checkpoint = {
         'qB': query_code,
@@ -109,6 +116,8 @@ def train(
         'map': mAP,
         'W': k_bit_matrix_generator.W,
         'mAPBit': mAP_bit,
+        'P_bit':P_bit,
+        'R_bit': R_bit,
     }
 
     return checkpoint
