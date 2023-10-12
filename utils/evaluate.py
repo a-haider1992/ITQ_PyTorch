@@ -55,7 +55,7 @@ def mean_average_precision_with_bit_similarity(query_code,
         score = torch.linspace(1, retrieval_cnt, retrieval_cnt).to(device)
 
         # Acquire index
-        index = (torch.nonzero(retrieval == 1).squeeze() + 1.0).float().reshape(-1)
+        index = (torch.nonzero(retrieval == 1).squeeze()).float().reshape(-1)
 
         index = index.topk(score.shape[0]).indices
 
@@ -231,8 +231,8 @@ def pr_curve_bit_similarity(query_code, retrieval_code, query_targets, retrieval
     P = P.cpu().numpy()
     R = R.cpu().numpy()
 
-    P = min_max_scaling(P)
-    R = min_max_scaling(R)
+    # P = min_max_scaling(P)
+    # R = min_max_scaling(R)
 
     # pdb.set_trace()
 
@@ -243,8 +243,8 @@ def pr_curve_bit_similarity(query_code, retrieval_code, query_targets, retrieval
     plt.ylabel('Precision')
     plt.title('Precision-Recall Curve (Bit Similarity with Bit Weights)')
     plt.grid(True)
-    plt.xlim(0, 1)
-    plt.ylim(0, 1)
+    plt.xlim(0.4, 0.6)
+    plt.ylim(0, 0.4)
     plt.savefig(f'PR-curve-bit-similarity-{num_bit}.jpg')
 
     return P, R
