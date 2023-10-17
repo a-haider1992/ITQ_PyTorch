@@ -57,11 +57,12 @@ def train(
         R = (VT.t() @ U.t())
 
     # Training kBit
-    training_code = generate_code(train_data.cpu(), code_length, R, pca)
+    training_code = generate_code_new(train_data.cpu(), code_length, R, pca)
     k_bit_matrix_generator = KBitWeights(training_code, k, max_iter, logger, device)
     # k_bit_matrix_generator.initialize_w()
     W = k_bit_matrix_generator.train()
-    W = torch.from_numpy(W).double().to(device)
+    # W = torch.from_numpy(W).double().to(device)
+    W = W.to(device)
     print(W.shape)
         
     # Evaluate
@@ -76,6 +77,7 @@ def train(
         device,
         W,
         topk,
+        k
         )
     # Compute map
     mAP = mean_average_precision(
@@ -85,25 +87,26 @@ def train(
         retrieval_targets,
         device,
         topk,
+        k
     )
 
-    # P-R curve
-    P, Recall = pr_curve(
-        query_code,
-        retrieval_code,
-        query_targets,
-        retrieval_targets,
-        device,
-    )
+    # # P-R curve
+    # P, Recall = pr_curve(
+    #     query_code,
+    #     retrieval_code,
+    #     query_targets,
+    #     retrieval_targets,
+    #     device,
+    # )
 
-    P_bit, R_bit = pr_curve_bit_similarity(query_code,
-        retrieval_code,
-        query_targets,
-        retrieval_targets,
-        device,
-        W)
+    # P_bit, R_bit = pr_curve_bit_similarity(query_code,
+    #     retrieval_code,
+    #     query_targets,
+    #     retrieval_targets,
+    #     device,
+    #     W)
     
-    # Save checkpoint
+    # # Save checkpoint
     checkpoint = {
         'qB': query_code,
         'rB': retrieval_code,
@@ -111,17 +114,16 @@ def train(
         'rL': retrieval_targets,
         'pca': pca,
         'rotation_matrix': R,
-        'P': P,
-        'R': Recall,
+        # 'P': P,
+        # 'R': Recall,
         'map': mAP,
         'W': k_bit_matrix_generator.W,
         'mAPBit': mAP_bit,
-        'P_bit':P_bit,
-        'R_bit': R_bit,
+        # 'P_bit':P_bit,
+        # 'R_bit': R_bit,
     }
 
     return checkpoint
-
 
 def generate_code(data, code_length, R, pca):
     """

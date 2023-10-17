@@ -3,13 +3,34 @@ import matplotlib.pyplot as plt
 import pdb
 import numpy as np
 
+
+def compute_hamming_distance(query_code, retrieval_tensor):
+    # Calculate Hamming distance
+    hamming_distances = (query_code.unsqueeze(0) != retrieval_tensor).sum(dim=1)
+
+    return hamming_distances
+
+def filter_retrieval_tensor(query_code, retrieval_tensor, max_hamming_distance=1):
+    # Compute Hamming distances
+    hamming_distances = compute_hamming_distance(query_code, retrieval_tensor)
+
+    # Find indices where Hamming distance is less than or equal to max_hamming_distance
+    valid_indices = (hamming_distances <= max_hamming_distance).nonzero().squeeze()
+
+    # Filter retrieval tensor and record original indices
+    filtered_retrieval_tensor = retrieval_tensor[valid_indices]
+
+    return filtered_retrieval_tensor, valid_indices
+
+
 def mean_average_precision_with_bit_similarity(query_code,
                                                retrieval_code,
                                                query_targets,
                                                retrieval_targets,
                                                device,
                                                bit_weights,
-                                               topk=None):
+                                               topk=None,
+                                               k=1):
     """
     Calculate mean average precision (MAP) with bit similarity scores and influence of bit weights.
 
@@ -27,21 +48,35 @@ def mean_average_precision_with_bit_similarity(query_code,
     """
     num_query = query_targets.shape[0]
     mean_AP = 0.0
-    # pdb.set_trace()
+    pdb.set_trace()
+    hamm = 0.0
+    # bit_weights = torch.diag(bit_weights)
     for i in range(num_query):
         # Retrieve images from database
-        retrieval = (query_targets[i, :] @ retrieval_targets.t() > 0).float()
-
+        
         query_code = query_code.double()
         retrieval_code = retrieval_code.double()
 
+        retrieval_code, valid_ret_indices = filter_retrieval_tensor(query_code[i, :], retrieval_code, k)
+
+        retrieval_targets = retrieval_targets[valid_ret_indices]
+
+        retrieval = (query_targets[i, :] @ retrieval_targets.t() > 0).float()
+        
         # bit_weights = torch.from_numpy(bit_weights).double().to(query_code.device)
 
         # Calculate bit similarity scores with bit weights influence
-        bit_similarity_scores = query_code[i, :] * (bit_weights @ retrieval_code.t()).t()
+        bit_similarity_scores = query_code[i, :] * (retrieval_code @ bit_weights.unsqueeze(dim=0).t())
+
+        # hamming_dist = 0.5 * (retrieval_code.shape[1] - query_code[i, :] @ retrieval_code.t())
+        # hamm += hamming_dist.mean().item()
+        # bit_similarity_scores = bit_similarity_scores.sum(dim=1)
+
+        sorted_scores_row_wise, _ = torch.sort(bit_similarity_scores, dim=1, descending=True)
+        sorted_scores_row_wise = sorted_scores_row_wise[:, 0]
 
         # Arrange position according to bit similarity scores
-        sorted_indices = torch.argsort(bit_similarity_scores, descending=True)
+        sorted_indices = torch.argsort(sorted_scores_row_wise, descending=True)
         retrieval = retrieval[sorted_indices][:topk]
 
         # Retrieval count
@@ -55,14 +90,16 @@ def mean_average_precision_with_bit_similarity(query_code,
         score = torch.linspace(1, retrieval_cnt, retrieval_cnt).to(device)
 
         # Acquire index
-        index = (torch.nonzero(retrieval == 1).squeeze()).float().reshape(-1)
+        index = (torch.nonzero(retrieval == 1).squeeze() + 1.0).float().reshape(-1)
 
-        index = index.topk(score.shape[0]).indices
+        # index = index.topk(score.shape[0]).indices
 
         mean_AP += (score / index).mean()
 
     mean_AP = mean_AP / num_query
-    return mean_AP.item()
+    # hamm = hamm / num_query
+    # print(hamm)
+    return (mean_AP.item() if (type(mean_AP) is torch.Tensor) else mean_AP)
 
 
 def mean_average_precision(query_code,
@@ -71,6 +108,7 @@ def mean_average_precision(query_code,
                            retrieval_targets,
                            device,
                            topk=None,
+                           k=1
                            ):
     """
     Calculate mean average precision(map).
@@ -90,6 +128,10 @@ def mean_average_precision(query_code,
     mean_AP = 0.0
 
     for i in range(num_query):
+        retrieval_code, valid_ret_indices = filter_retrieval_tensor(query_code[i, :], retrieval_code, k)
+
+        retrieval_targets = retrieval_targets[valid_ret_indices]
+
         # Retrieve images from database
         retrieval = (query_targets[i, :] @ retrieval_targets.t() > 0).float()
 
@@ -115,7 +157,7 @@ def mean_average_precision(query_code,
         mean_AP += (score / index).mean()
 
     mean_AP = mean_AP / num_query
-    return mean_AP.item()
+    return (mean_AP.item() if (type(mean_AP) is torch.Tensor) else mean_AP)
 
 
 def pr_curve(query_code, retrieval_code, query_targets, retrieval_targets, device):
