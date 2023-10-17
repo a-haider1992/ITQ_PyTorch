@@ -136,16 +136,22 @@ class KBitWeights:
         for iter in trange(self.max_iterations, desc="kbits algorithm training in progress.."):
             for row in self.train_data_hash:
                 # self.C = self.generate_candidate_matrix(row)
+
                 self.C = self.generate_candidate_matrix_gpu(row)
+                U, S, VT = torch.linalg.svd(self.C, full_matrices=False)
+                weights = S**2
+                # Normalize the weights to sum to 1
+                normalized_weights = weights / weights.sum()
+                self.W = normalized_weights[:self.hash_length]
                 # self.C = self.C_parallel.generate_candidate_matrix_gpu(row)
                 # print(f'The shape of C: {self.C.shape}')
-                D = self.W @ self.C.t()
+                # D = self.W @ self.C.t()
                 # D = np.dot(self.C, self.W)
                 # Compute SVD, then update W
                 # Compute the SVD
-                D = D.unsqueeze(dim=0)
-                U, S, Vt = torch.svd(D)
-                self.W = Vt.squeeze()[:self.hash_length]
+                # D = D.unsqueeze(dim=0)
+                # U, S, Vt = torch.svd(D)
+                # self.W = Vt.squeeze()[:self.hash_length]
                 # U: Left singular vectors
                 # S: Singular values (a 1-D array of non-negative real numbers)
                 # Vt: Right singular vectors (transpose of V)
