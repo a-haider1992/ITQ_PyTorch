@@ -11,12 +11,14 @@ from torch.nn.parallel import DataParallel
 import pdb
 
 class KBitWeights:
-    def __init__(self, train_data, k, max_iterations, logger, device):
+    def __init__(self, train_data, original_data, orig_eigens, k, max_iterations, logger, device):
         """
         Initializes a kBitWeights instance.
 
         Args:
             train_data: Training hash vectors.
+            original_data: PCA processed original feature vectors of hasgh length
+            Eigens: PCA eigne values of original data
             k: Number of non-zero elements above the diagonal in the upper-triangular matrix.
             max_iterations: Maximum number of iterations for training.
             logger: Write progress.
@@ -24,12 +26,15 @@ class KBitWeights:
         """
         self.train_data_hash = train_data
         self.hash_length = train_data.shape[1]
+        self.original_data = original_data
+        self.eigens = orig_eigens
         self.k = k
         self.max_iterations = max_iterations
+        self.W = torch.from_numpy(self.eigens).double().to(device)
         # self.W = np.zeros((self.hash_length, self.hash_length))
         # self.W = np.triu(np.ones((self.hash_length, self.hash_length)), k=0)
         # self.W = np.eye(self.hash_length)
-        self.W = torch.zeros(1, self.hash_length, dtype=torch.float64)
+        # self.W = torch.zeros(1, self.hash_length, dtype=torch.float64, device=device)
         self.C = None
         self.log = logger
         self.device = device
@@ -121,7 +126,7 @@ class KBitWeights:
             matrix_gpu[i] = new_vector_gpu
         
         # Copy the resulting matrix from GPU to CPU for further processing if needed
-        matrix_cpu = matrix_gpu.cpu()
+        matrix_cpu = matrix_gpu
         
         return matrix_cpu
                 
@@ -134,18 +139,31 @@ class KBitWeights:
         start_time = time.time()
         pdb.set_trace()
         for iter in trange(self.max_iterations, desc="kbits algorithm training in progress.."):
-            for row in self.train_data_hash:
+            D = self.train_data_hash.double() * self.W
+            U,S,V = torch.svd(D)
+            self.W = torch.sum(V, dim=0)
+            # for row in self.train_data_hash:
                 # self.C = self.generate_candidate_matrix(row)
-                self.C = self.generate_candidate_matrix_gpu(row)
+                # self.C = self.generate_candidate_matrix_gpu(row)
+                # shuffled_rows = torch.randperm(self.C.shape[0])
+                # self.C = self.C[shuffled_rows].T
+                # shuffled_cols = torch.randperm(self.C.shape[0])
+                # self.C = self.C[shuffled_cols].T
+                # Compute bit-wise variance
+                # var = torch.var(self.C, dim=0)
+                # self.W += var
                 # self.C = self.C_parallel.generate_candidate_matrix_gpu(row)
                 # print(f'The shape of C: {self.C.shape}')
-                D = self.W @ self.C.t()
+                # D = self.W * self.C
                 # D = np.dot(self.C, self.W)
                 # Compute SVD, then update W
                 # Compute the SVD
-                D = D.unsqueeze(dim=0)
-                U, S, Vt = torch.svd(D)
-                self.W = Vt.squeeze()[:self.hash_length]
+                # D = D.unsqueeze(dim=0)
+                # U, S, Vt = torch.svd(D)
+                # self.W = torch.sum(Vt, dim=0)
+                # self.W = S
+                # self.W = self.W / torch.sum(S)
+                # self.W = Vt.squeeze()[:self.hash_length]
                 # U: Left singular vectors
                 # S: Singular values (a 1-D array of non-negative real numbers)
                 # Vt: Right singular vectors (transpose of V)
@@ -154,6 +172,11 @@ class KBitWeights:
                 # U = U[-self.hash_length:, :self.hash_length]
                 # self.W = (S * Vt.T * self.W)
                 # self.W = (U.T * Vt.T)
+            # self.W = self.W / self.train_data_hash.shape[0]
+            # for row in self.original_data:
+            #     self.W += torch.var(self.original_data.double(), dim=0)
+            # self.W = self.W / self.original_data.shape[0]
+            # self.W += torch.var(self.train_data_hash.double(), dim=0)
         end_time = time.time()
         self.log.info('kBit algorithm training completed in {} secs.'.format(end_time - start_time))
         return self.W

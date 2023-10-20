@@ -48,6 +48,9 @@ def train(
     # PCA
     pca = PCA(n_components=code_length)
     V = torch.from_numpy(pca.fit_transform(train_data.numpy())).to(device)
+    V_eigens = pca.explained_variance_
+
+    # pdb.set_trace()
 
     # Training
     for i in range(max_iter):
@@ -58,7 +61,7 @@ def train(
 
     # Training kBit
     training_code = generate_code_new(train_data.cpu(), code_length, R, pca)
-    k_bit_matrix_generator = KBitWeights(training_code, k, max_iter, logger, device)
+    k_bit_matrix_generator = KBitWeights(training_code, V, V_eigens, k, max_iter, logger, device)
     # k_bit_matrix_generator.initialize_w()
     W = k_bit_matrix_generator.train()
     # W = torch.from_numpy(W).double().to(device)
