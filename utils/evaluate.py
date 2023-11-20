@@ -54,8 +54,8 @@ def mean_average_precision_with_bit_similarity(query_code,
     for i in range(num_query):
         # Retrieve images from database
         
-        # query_code = query_code.double()
-        # retrieval_code = retrieval_code.double()
+        query_code = query_code.double()
+        retrieval_code = retrieval_code.double()
 
         retrieval_code, valid_ret_indices = filter_retrieval_tensor(query_code[i, :], retrieval_code, k)
 
@@ -66,15 +66,18 @@ def mean_average_precision_with_bit_similarity(query_code,
         # bit_weights = torch.from_numpy(bit_weights).double().to(query_code.device)
 
         # Calculate bit similarity scores with bit weights influence
-        bit_similarity_scores = (query_code[i, :] + retrieval_code) * bit_weights
-        bit_similarity_scores = torch.abs(bit_similarity_scores)
+        # bit_similarity_scores = (query_code[i, :] + retrieval_code) * bit_weights
+        # bit_similarity_scores = torch.abs(bit_similarity_scores)
+
+        bit_similarity_scores = (torch.diag(bit_weights) * query_code[i, :]).unsqueeze(dim=0) @ retrieval_code.T
+        bit_similarity_scores = bit_similarity_scores.squeeze(dim=0)
 
         # bit_similarity_scores = torch.sum(bit_weights * (query_code[i, :] != retrieval_code), dim=1)
         # scores = 1 / (1 + bit_similarity_scores)
 
         # hamming_dist = 0.5 * (retrieval_code.shape[1] - query_code[i, :] @ retrieval_code.t())
         # hamm += hamming_dist.mean().item()
-        bit_similarity_scores = bit_similarity_scores.sum(dim=1)
+        # bit_similarity_scores = bit_similarity_scores.sum(dim=1)
 
         # sorted_scores_row_wise, _ = torch.sort(bit_similarity_scores, dim=1, descending=True)
         # sorted_scores_row_wise = sorted_scores_row_wise[:, 0]

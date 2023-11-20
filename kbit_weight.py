@@ -30,11 +30,11 @@ class KBitWeights:
         self.eigens = orig_eigens
         self.k = k
         self.max_iterations = max_iterations
-        self.W = torch.from_numpy(self.eigens).double().to(device)
+        # self.W = torch.from_numpy(self.eigens).double().to(device)
         # self.W = np.zeros((self.hash_length, self.hash_length))
         # self.W = np.triu(np.ones((self.hash_length, self.hash_length)), k=0)
         # self.W = np.eye(self.hash_length)
-        # self.W = torch.zeros(1, self.hash_length, dtype=torch.float64, device=device)
+        self.W = torch.ones((self.hash_length, self.hash_length), dtype=torch.float64, device=device)
         self.C = None
         self.log = logger
         self.device = device
@@ -137,12 +137,18 @@ class KBitWeights:
             np.ndarray: The trained upper-triangular weight matrix W.
         """
         start_time = time.time()
-        pdb.set_trace()
+        # pdb.set_trace()
         for iter in trange(self.max_iterations, desc="kbits algorithm training in progress.."):
-            D = self.train_data_hash.double() * self.W
-            U,S,V = torch.svd(D)
+            D = self.train_data_hash.double() @ self.W
+            U,S,V = torch.svd(D.T)
+            # print(U)
+            # print(S)
+            # print(V)
             self.W = torch.sum(V, dim=0)
+            self.W = U * self.W
+            # self.W += torch.var(self.original_data.double(), dim=0)
             # for row in self.train_data_hash:
+            #     print(row)
                 # self.C = self.generate_candidate_matrix(row)
                 # self.C = self.generate_candidate_matrix_gpu(row)
                 # shuffled_rows = torch.randperm(self.C.shape[0])
