@@ -57,13 +57,20 @@ def mean_average_precision_with_bit_similarity(query_code,
         query_code = query_code.double()
         retrieval_code = retrieval_code.double()
 
-        retrieval_code, valid_ret_indices = filter_retrieval_tensor(query_code[i, :], retrieval_code, k)
+        # retrieval_code, valid_ret_indices = filter_retrieval_tensor(query_code[i, :], retrieval_code, k)
 
-        retrieval_targets = retrieval_targets[valid_ret_indices]
+        # retrieval_targets = retrieval_targets[valid_ret_indices]
 
         retrieval = (query_targets[i, :] @ retrieval_targets.t() > 0).float()
+
+        weighted_hamming_distances = torch.sum(bit_weights * (query_code[i, :] != retrieval_code), dim=1)
+
+        # Generate similarity scores based on the distances (lower distance => higher score)
+        scores = 1 / (1 + weighted_hamming_distances)
+
+        sorted_indices = torch.argsort(scores, descending=True)
         
-        # bit_weights = torch.from_numpy(bit_weights).double().to(query_code.device)
+        # # bit_weights = torch.from_numpy(bit_weights).double().to(query_code.device)
 
         # Calculate bit similarity scores with bit weights influence
         # bit_similarity_scores = (query_code[i, :] + retrieval_code) * bit_weights
