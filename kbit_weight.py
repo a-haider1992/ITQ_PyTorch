@@ -186,7 +186,7 @@ class KBitWeights:
         end_time = time.time()
         self.log.info('kBit algorithm training completed in {} secs.'.format(end_time - start_time))
         eigen = torch.tensor(self.eigens, dtype=torch.double, device=self.device)
-        return eigen
+        return torch.sum(self.W, dim=1) + eigen
 
 class InvertBitsModel(nn.Module):
     def __init__(self, invert_bits_function):
