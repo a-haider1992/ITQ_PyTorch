@@ -70,8 +70,8 @@ def train(
         
     # Evaluate
     # Generate query code and retrieval code
-    query_code = generate_code(query_data.cpu(), code_length, R, pca)
-    retrieval_code = generate_code(retrieval_data.cpu(), code_length, R, pca)
+    query_code = generate_code_new(query_data.cpu(), code_length, R, pca)
+    retrieval_code = generate_code_new(retrieval_data.cpu(), code_length, R, pca)
 
     mAP_bit = mean_average_precision_with_bit_similarity(query_code,
         retrieval_code,

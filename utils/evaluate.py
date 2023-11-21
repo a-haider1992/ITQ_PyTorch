@@ -76,13 +76,16 @@ def mean_average_precision_with_bit_similarity(query_code,
         # bit_similarity_scores = (query_code[i, :] + retrieval_code) * bit_weights
         # bit_similarity_scores = torch.abs(bit_similarity_scores)
 
-        # bit_similarity_scores = (torch.sum(bit_weights, dim=1) * query_code[i, :]).unsqueeze(dim=0) @ retrieval_code.T
+        # bit_similarity_scores = (torch.diag(bit_weights) * query_code[i, :]).unsqueeze(dim=0) @ retrieval_code.T
         # bit_similarity_scores = bit_similarity_scores.squeeze(dim=0)
 
         # bit_similarity_scores = torch.sum(bit_weights * (query_code[i, :] != retrieval_code), dim=1)
         # scores = 1 / (1 + bit_similarity_scores)
 
-        hamming_dist = 0.5 * (retrieval_code.shape[1] - (torch.sum(bit_weights, dim=1) * query_code[i, :]).unsqueeze(dim=0) @ retrieval_code.T)
+        # hamming_dist = 0.5 * (retrieval_code.shape[1] - (torch.sum(bit_weights, dim=1) * query_code[i, :]).unsqueeze(dim=0) @ retrieval_code.T)
+        xor_q_ret = torch.bitwise_xor(query_code[i, :].to(torch.long), retrieval_code.to(torch.long)).to(torch.double)
+        # hamming_dist = 0.5 * (torch.sum(bit_weights, dim=1) @ xor_q_ret.T)
+        hamming_dist = 0.5 * (bit_weights @ xor_q_ret.T)
         # hamm += hamming_dist.mean().item()
         # bit_similarity_scores = bit_similarity_scores.sum(dim=1)
 
